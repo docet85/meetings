@@ -2,6 +2,8 @@ from flask import Flask
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 
+from time import sleep
+
 # We instantiate the webapp
 app = Flask('Presenter')
 
@@ -19,9 +21,10 @@ import routes
 try:
     db.drop_all()
     db.create_all()
+    sleep(2)
     models.seed()
-except:  # this is nasty, but again it's just to have some data out of nothing
-    pass
+except Exception as e:  # this is nasty, but again it's just to have some data out of nothing
+    app.logger.warning(e)
 
 
 app.config['DEBUG'] = True
