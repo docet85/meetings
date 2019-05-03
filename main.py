@@ -5,28 +5,29 @@ from flask_sqlalchemy import SQLAlchemy
 from time import sleep
 
 # We instantiate the webapp
-app = Flask('Presenter')
+import meetings
 
-# Then let's do some DB stuff
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
-db = SQLAlchemy(app)
+if meetings.app is None:
+    app = Flask('Presenter')
+    meetings.app = app
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///./presenter.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
-app.config['BOOTSTRAP_SERVE_LOCAL'] = True
-Bootstrap(app)
+    # Then let's do some DB stuff
+    meetings.db = SQLAlchemy(app)
 
-import models
-import routes
+    from meetings.models import *
+    from meetings.routes import create_routes
 
-# Since this is just a demo let's drop all and try to create everything
-try:
-    db.drop_all()
-    db.create_all()
-    sleep(2)
-    models.seed()
-except Exception as e:  # this is nasty, but again it's just to have some data out of nothing
-    app.logger.warning(e)
+    Bootstrap(app)
 
+    create_routes(app)
 
-app.config['DEBUG'] = True
-
-app.run()
+if __name__ == '__main__':
+    # Since this is just a demo let's drop all and try to create everything
+    meetings.db.drop_all()
+    meetings.db.create_all()
+    seed()
+    meetings.app.config['DEBUG'] = True
+    meetings.app.run()

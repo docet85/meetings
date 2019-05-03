@@ -1,5 +1,5 @@
 {%- extends "bootstrap/base.html" %}
-{% block title %}This is an example page{% endblock %}
+{% block title %}Meetings Main Page{% endblock %}
 
 {% block styles -%}
     {{super()}}
@@ -18,7 +18,7 @@
         <div class="collapse navbar-collapse" id="navbarColor01">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item active">
-                    <a class="nav-link" href="#">Ongoning Meeting<span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="#">Ongoing Meeting<span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('hist') }}">History</a>
@@ -26,5 +26,46 @@
             </ul>
         </div>
     </nav>
-
+    <div class="container-fluid">
+    <div style="margin-top: 20px; display: block"></div>
+        <div class="row">
+            <div class="col-lg-6 col-md-6 col-sm-12">
+                <div class="jumbotron">
+                    {% if ongoing %}
+                        <h1 class="display-4">Presenter: {{ latest_meeting.presenter.name }}</h1>
+                        <p class="lead">The meeting started at: {{ latest_meeting.ts }}</p>
+                        <hr class="my-4">
+                        <p>Press the button to stop the meeting.</p>
+                        <p class="lead">
+                            <a class="btn btn-primary btn-lg" href="#" role="button">Stop Meeting</a>
+                        </p>
+                    {% else %}
+                        <h1 class="display-4">No ongoing meeting</h1>
+                        <p class="lead">There is no ongoing meeting, please select the desired participants and click the button to start one.
+                            <br> A presenter will be randomly picked among the participants to lead the meeting.</p>
+                        <hr class="my-4">
+                        <p>Use the selector beside each person's name to mark missing people.</p>
+                        <p class="lead">
+                            <a class="btn btn-primary btn-lg" href="#" role="button">Start Meeting</a>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6 col-sm-12">
+                {% for p in persons %}
+                <div class="card{% if p.available %} border-primary {% endif %} mb-6"
+                     style="max-width: 20rem;">
+                    <div class="card-header">
+                    <div class="custom-control custom-switch float-right">
+                        <input type="checkbox" class="custom-control-input" id="customSwitch{{- p.id -}}"
+                               {% if p.available %}checked="" {% endif %}>
+                        <label class="custom-control-label" for="customSwitch{{- p.id -}}"></label>
+                    </div>
+                    <h5>{{ p.username }}</h5>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 {% endblock %}
