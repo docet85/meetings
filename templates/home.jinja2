@@ -33,7 +33,7 @@
                 <div class="jumbotron">
                     {% if ongoing %}
                         <h1 class="display-4">Presenter: {{ latest_meeting.presenter.name }}</h1>
-                        <p class="lead">The meeting started at: {{ latest_meeting.ts }}</p>
+                        <p class="lead">The meeting started at: {{ latest_meeting.start_ts }}</p>
                         <hr class="my-4">
                         <p>Press the button to stop the meeting.</p>
                         <p class="lead">
@@ -51,20 +51,37 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-md-6 col-sm-12">
-                {% for p in persons %}
-                <div class="card{% if p.available %} border-primary {% endif %} mb-6"
-                     style="max-width: 20rem;">
-                    <div class="card-header">
-                    <div class="custom-control custom-switch float-right">
-                        <input type="checkbox" class="custom-control-input" id="customSwitch{{- p.id -}}"
-                               {% if p.available %}checked="" {% endif %}>
-                        <label class="custom-control-label" for="customSwitch{{- p.id -}}"></label>
-                    </div>
-                    <h5>{{ p.username }}</h5>
-                    </div>
+            <div class="col-md-5 col-sm-12">
+                <table class="table table-hover">
+                    <thead>
+                    <tr class="table-primary">
+                        <th scope="col">Username</th>
+                        <th scope="col">Notes</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for p in persons %}
+                        <tr {% if not p.available %}class="table-active"{% endif %}
+                            {% if p.id not in ongoing_participants %}class="table-dark"{% endif %} >
+                            <th scope="row">{{ p.username }} {% if ongoing and p.id == latest_meeting.presenter_id %}
+                                <span class="badge badge-danger">Presenter</span> {% endif %}</th>
+                            <td>
+                                {% if ongoing and p.id not in ongoing_participants %}Excluded{% else %}
+                                {% if not p.available %}Not Present{% endif %}{% endif %}
+                            </td>
+                            <td>ban, missing</td>
+                        </tr>
+
+                    {% endfor %}
+                    <tr class="table-success">
+                        <th scope="row">Add new</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    </tbody>
+                </table>
                 </div>
-                {% endfor %}
             </div>
         </div>
     </div>
