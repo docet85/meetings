@@ -37,7 +37,7 @@
                         <hr class="my-4">
                         <p>Press the button to stop the meeting.</p>
                         <p class="lead">
-                            <a class="btn btn-primary btn-lg" href="#" role="button">Stop Meeting</a>
+                            <a class="btn btn-primary btn-lg" href="#" onclick="stop_meeting()" role="button">Stop Meeting</a>
                         </p>
                     {% else %}
                         <h1 class="display-4">No ongoing meeting</h1>
@@ -46,7 +46,7 @@
                         <hr class="my-4">
                         <p>Use the selector beside each person's name to mark missing people.</p>
                         <p class="lead">
-                            <a class="btn btn-primary btn-lg" href="#" role="button">Start Meeting</a>
+                            <a class="btn btn-primary btn-lg" href="#" data-toggle="modal" onclick="start_meeting()" role="button">Start Meeting</a>
                         </p>
                     {% endif %}
                 </div>
@@ -72,7 +72,6 @@
                             </td>
                             <td>ban, missing</td>
                         </tr>
-
                     {% endfor %}
                     <tr class="table-success">
                         <th scope="row">Add new</th>
@@ -85,4 +84,49 @@
             </div>
         </div>
     </div>
+    <div class="modal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select invited persons</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    {% for p in persons %}
+                        <tr {% if not p.available %}class="table-active"{% endif %}
+                            {% if p.id not in ongoing_participants %}class="table-dark"{% endif %} >
+                            <th scope="row">{{ p.username }} {% if ongoing and p.id == latest_meeting.presenter_id %}
+                                <span class="badge badge-danger">Presenter</span> {% endif %}</th>
+                            <td>
+                                {% if ongoing and p.id not in ongoing_participants %}Excluded{% else %}
+                                    {% if not p.available %}Not Present{% endif %}{% endif %}
+                            </td>
+                            <td>ban, missing</td>
+                        </tr>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary">Confirm</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        $(document).ready(function() {
+                start_meeting = function () {
+                    $.post('api/create_meeting').done(location.reload);
+                };
+
+                stop_meeting = function () {
+                    $.post('api/stop_meeting').done(location.reload);
+                };
+            }
+        );
+    </script>
 {% endblock %}
