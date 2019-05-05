@@ -5,6 +5,9 @@
     {{super()}}
     <link rel="stylesheet" type="text/css"
           href="{{url_for('static', filename='bootstrap.min.css')}}">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="{{
+  url_for('static', filename='jquery.js') }}">\x3C/script>')</script>
 {% endblock %}
 
 {% block content %}
@@ -31,7 +34,7 @@
         <div class="row">
             <div class="col-lg-6 col-md-6 col-sm-12">
                 <div class="jumbotron">
-                    {% if ongoing %}
+                    {% if status == 'started' %}
                         <h1 class="display-4">Presenter: {{ latest_meeting.presenter.name }}</h1>
                         <p class="lead">The meeting started at: {{ latest_meeting.start_ts }}</p>
                         <hr class="my-4">
@@ -39,14 +42,23 @@
                         <p class="lead">
                             <a class="btn btn-primary btn-lg" href="#" onclick="stop_meeting()" role="button">Stop Meeting</a>
                         </p>
-                    {% else %}
+                    {% elif status == 'created' %}
+                        <h1 class="display-4">Meeting created</h1>
+                        <p class="lead">You are about to start the meeting, please select the desired participants and click the button to start one.
+                            <br> A presenter will be randomly picked among the participants to lead the meeting.</p>
+                        <hr class="my-4">
+                        <p>Use the selector beside each person's name to exclude participants.</p>
+                        <p class="lead">
+                            <a class="btn btn-primary btn-lg" href="#" onclick="start_meeting()" role="button">Start Meeting</a>
+                        </p>
+                    {% else %} {# finished #}
                         <h1 class="display-4">No ongoing meeting</h1>
-                        <p class="lead">There is no ongoing meeting, please select the desired participants and click the button to start one.
+                        <p class="lead">There is no ongoing meeting, please click the button to create one.
                             <br> A presenter will be randomly picked among the participants to lead the meeting.</p>
                         <hr class="my-4">
                         <p>Use the selector beside each person's name to mark missing people.</p>
                         <p class="lead">
-                            <a class="btn btn-primary btn-lg" href="#" data-toggle="modal" onclick="start_meeting()" role="button">Start Meeting</a>
+                            <a class="btn btn-primary btn-lg" href="#" onclick="create_meeting()" role="button">Create Meeting</a>
                         </p>
                     {% endif %}
                 </div>
@@ -67,49 +79,26 @@
                             <th scope="row">{{ p.username }} {% if ongoing and p.id == latest_meeting.presenter_id %}
                                 <span class="badge badge-danger">Presenter</span> {% endif %}</th>
                             <td>
-                                {% if ongoing and p.id not in ongoing_participants %}Excluded{% else %}
+                                {% if status!='finished' and p.id not in ongoing_participants %}Excluded{% else %}
                                 {% if not p.available %}Not Present{% endif %}{% endif %}
                             </td>
-                            <td>ban, missing</td>
+                            <td>
+                                {% if status!='finished' %} {% if p.id not in ongoing_participants %}Include{% else %}Exclude{% endif %}{% endif %}
+                                {% if not p.available %}<i class="fas fa-plus-circle"></i>{% else %}<i class="fas fa-user-times"></i>{% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                     <tr class="table-success">
-                        <th scope="row">Add new</th>
+                        <th scope="row">
+                            <input type="text" value="Add new" class="form-control" id="inputValid">
+                            <!--<input type="text" value="correct value" class="form-control is-valid" id="inputValid">-->
+                            <!--<div class="valid-feedback">Success! You've done it.</div>-->
+                        </th>
                         <td></td>
-                        <td></td>
+                        <td class="align-middle"><i class="fas fa-user-plus"></i> </td>
                     </tr>
                     </tbody>
                 </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Select invited persons</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    {% for p in persons %}
-                        <tr {% if not p.available %}class="table-active"{% endif %}
-                            {% if p.id not in ongoing_participants %}class="table-dark"{% endif %} >
-                            <th scope="row">{{ p.username }} {% if ongoing and p.id == latest_meeting.presenter_id %}
-                                <span class="badge badge-danger">Presenter</span> {% endif %}</th>
-                            <td>
-                                {% if ongoing and p.id not in ongoing_participants %}Excluded{% else %}
-                                    {% if not p.available %}Not Present{% endif %}{% endif %}
-                            </td>
-                            <td>ban, missing</td>
-                        </tr>
-                    {% endfor %}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary">Confirm</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                 </div>
             </div>
         </div>
@@ -118,15 +107,16 @@
 
 {% block scripts %}
     <script>
-        $(document).ready(function() {
-                start_meeting = function () {
-                    $.post('api/create_meeting').done(location.reload);
-                };
+            create_meeting = function () {
+                $.post('api/create_meeting').done(function () {location.reload()});
+            };
 
-                stop_meeting = function () {
-                    $.post('api/stop_meeting').done(location.reload);
-                };
-            }
-        );
+            start_meeting = function () {
+                $.post('api/start_meeting').done(function () {location.reload()});
+            };
+
+            stop_meeting = function () {
+                $.post('api/stop_meeting').done(function () {location.reload()});
+            };
     </script>
 {% endblock %}

@@ -10,16 +10,18 @@ def create_routes(app):
         """ This is the main page - here we select the persons and let the meeting start or stop it when
         done.
         """
-        ongoing = True
-        latest_meeting = Meeting.query.order_by(Meeting.start_ts.desc()).first()
+        latest_meeting = Meeting.query.order_by(Meeting.creation_ts.desc()).first()
         persons = Person.query.all()
-        if latest_meeting is None or not latest_meeting.ongoing:
-            ongoing = False
-            ongoing_participants = [p.id for p in persons if p.available]
+        if latest_meeting is None:
+            status = 'finished'
         else:
+            status = latest_meeting.status
+        if status in ['created', 'started']:
             ongoing_participants = [p.id for p in latest_meeting.participants]
+        else:
+            ongoing_participants = [p.id for p in persons if p.available]
 
-        return render_template('home.jinja2', latest_meeting=latest_meeting, ongoing=ongoing, persons=persons,
+        return render_template('home.jinja2', latest_meeting=latest_meeting, status=status, persons=persons,
                                ongoing_participants=ongoing_participants)
 
     @app.route("/hist")
@@ -37,27 +39,27 @@ def create_routes(app):
         m.participants = [p for p in Person.query.filter_by(available=True).all()]
         db.session.add(m)
         db.session.commit()
-        return make_response(200, 'ok')
+        return make_response('ok', 200)
 
     @app.route("/api/start_meeting", methods=['POST'])
     def start_meeting():
         from datetime import datetime
-        m = Meeting.query.order_by(Meeting.start_ts.desc()).first()
-        m.start = datetime.now()
-        m.ongoing = True
+        m = Meeting.query.order_by(Meeting.creation_ts.desc()).first()
+        m.start_ts = datetime.now()
+        m.status = 'started'
         # db.session.add(m)
         db.session.commit()
-        return make_response(200, 'ok')
+        return make_response('ok', 200)
 
     @app.route("/api/stop_meeting", methods=['POST'])
     def stop_meeting():
         from datetime import datetime
-        m = Meeting.query.order_by(Meeting.start_ts.desc()).first()
-        m.stop = datetime.now()
-        m.ongoing = False
+        m = Meeting.query.order_by(Meeting.creation_ts.desc()).first()
+        m.stop_ts = datetime.now()
+        m.status = 'finished'
         # db.session.add(m)
         db.session.commit()
-        return make_response(200, 'ok')
+        return make_response('ok', 200)
 
     @app.route("/api/person", methods=['POST'])
     def person():
@@ -65,7 +67,15 @@ def create_routes(app):
         p = Person(**j_person)
         db.session.add(p)
         db.session.commit()
-        return make_response(200, 'ok')
+        return make_response('ok', 200)
+
+    @app.route("/api/person/presence", methods=['POST', 'DELETE'])
+    def person_presence():
+        j_person = request.json
+        p = Person(**j_person)
+        db.session.add(p)
+        db.session.commit()
+        return make_response('ok', 200)
 
     @app.route("/api/participant/<meeting_id>/<person_id>", methods=['POST', 'DELETE'])
     def participant(meeting_id, person_id):
@@ -73,4 +83,4 @@ def create_routes(app):
             inclusion.insert().values(person_id=person_id, meeting_id=meeting_id)
         else:
             inclusion.delete().where(person_id=person_id, meeting_id=meeting_id)
-        return make_response(200, 'ok')
+        return make_response('ok', 200)

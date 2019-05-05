@@ -22,9 +22,9 @@ class Meeting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     creation_ts = db.Column(db.DateTime, nullable=False, default=datetime.now)
     start_ts = db.Column(db.DateTime, nullable=True)
-    end_ts = db.Column(db.DateTime, nullable=True)
-    presenter_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    ongoing = db.Column(db.Boolean, nullable=False, default=lambda: False)
+    stop_ts = db.Column(db.DateTime, nullable=True)
+    presenter_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True)
+    status = db.Column(db.String, nullable=False, default='created')
 
     # relations are handy to retrieve the whole related object/set of related object without querying directly for them
     presenter = db.relationship('Person', primaryjoin='Meeting.presenter_id == Person.id')
