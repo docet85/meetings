@@ -30,4 +30,4 @@ if __name__ == '__main__':
     meetings.db.create_all()
     seed()
     meetings.app.config['DEBUG'] = True
-    meetings.app.run()
+    meetings.app.run(host="0.0.0.0", port="5000")
