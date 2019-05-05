@@ -7,15 +7,24 @@ For sake of implementation these are persistency-centered models: they contain a
 and perform no "action". All the behavior is coded inside so.called "routes", that act de-facto like controllers.
 """
 
+
 class Person(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     available = db.Column(db.Boolean, nullable=False, default=lambda: True)
 
-inclusion = db.Table('inclusion',
-                    db.Column('person_id', db.Integer, db.ForeignKey('person.id'), primary_key=True),
-                    db.Column('meeting_id', db.Integer, db.ForeignKey('meeting.id'), primary_key=True)
-                    )
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'available': self.available
+        }
+
+
+invitation = db.Table('invitation',
+                     db.Column('person_id', db.Integer, db.ForeignKey('person.id'), primary_key=True),
+                     db.Column('meeting_id', db.Integer, db.ForeignKey('meeting.id'), primary_key=True)
+                     )
 
 
 class Meeting(db.Model):
@@ -28,7 +37,7 @@ class Meeting(db.Model):
 
     # relations are handy to retrieve the whole related object/set of related object without querying directly for them
     presenter = db.relationship('Person', primaryjoin='Meeting.presenter_id == Person.id')
-    participants = db.relationship('Person', secondary=inclusion, lazy='subquery',
+    participants = db.relationship('Person', secondary=invitation, lazy='subquery',
                                    backref=db.backref('meetings', lazy=True))
 
 

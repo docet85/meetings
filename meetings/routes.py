@@ -1,5 +1,5 @@
 from flask import render_template, request, make_response
-from meetings.models import Meeting, Person, inclusion
+from meetings.models import Meeting, Person, invitation
 from meetings import db
 
 
@@ -14,7 +14,9 @@ def create_routes(app):
         persons = Person.query.all()
         if latest_meeting is None:
             status = 'finished'
+            meeting_id = None
         else:
+            meeting_id = latest_meeting.id
             status = latest_meeting.status
         if status in ['created', 'started']:
             ongoing_participants = [p.id for p in latest_meeting.participants]
@@ -22,7 +24,7 @@ def create_routes(app):
             ongoing_participants = [p.id for p in persons if p.available]
 
         return render_template('home.jinja2', latest_meeting=latest_meeting, status=status, persons=persons,
-                               ongoing_participants=ongoing_participants)
+                               ongoing_participants=ongoing_participants, meeting_id=meeting_id)
 
     @app.route("/hist")
     def hist():
@@ -44,10 +46,15 @@ def create_routes(app):
     @app.route("/api/start_meeting", methods=['POST'])
     def start_meeting():
         from datetime import datetime
+        from random import choice
         m = Meeting.query.order_by(Meeting.creation_ts.desc()).first()
         m.start_ts = datetime.now()
         m.status = 'started'
-        # db.session.add(m)
+
+        p_ids = [p.id for p in m.participants]
+
+        m.presenter_id = choice(p_ids)
+
         db.session.commit()
         return make_response('ok', 200)
 
@@ -57,30 +64,36 @@ def create_routes(app):
         m = Meeting.query.order_by(Meeting.creation_ts.desc()).first()
         m.stop_ts = datetime.now()
         m.status = 'finished'
-        # db.session.add(m)
+
         db.session.commit()
         return make_response('ok', 200)
 
-    @app.route("/api/person", methods=['POST'])
-    def person():
-        j_person = request.json
+    @app.route("/api/person/<uname>", methods=['POST'])
+    def person(uname):
+        import json
+        j_person = {'username': uname}
         p = Person(**j_person)
         db.session.add(p)
         db.session.commit()
-        return make_response('ok', 200)
+        return make_response(json.dumps(p.to_dict()), 200)
 
-    @app.route("/api/person/presence", methods=['POST', 'DELETE'])
-    def person_presence():
-        j_person = request.json
-        p = Person(**j_person)
-        db.session.add(p)
+    @app.route("/api/person/presence/<pid>", methods=['POST', 'DELETE'])
+    def person_presence(pid):
+        p = Person.query.filter_by(id=pid).first_or_404()
+        p.available = (request.method == 'POST')
         db.session.commit()
         return make_response('ok', 200)
 
     @app.route("/api/participant/<meeting_id>/<person_id>", methods=['POST', 'DELETE'])
     def participant(meeting_id, person_id):
+        m = Meeting.query.filter_by(id=meeting_id).first()
+        p = Person.query.filter_by(id=person_id).first()
+        if not m or not p:
+            return make_response('Meeting or person not existing', 404)
+
         if request.method == 'POST':
-            inclusion.insert().values(person_id=person_id, meeting_id=meeting_id)
+            m.participants.append(p)
         else:
-            inclusion.delete().where(person_id=person_id, meeting_id=meeting_id)
+            m.participants.remove(p)
+        db.session.commit()
         return make_response('ok', 200)

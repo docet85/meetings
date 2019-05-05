@@ -2,12 +2,12 @@
 {% block title %}Meetings Main Page{% endblock %}
 
 {% block styles -%}
-    {{super()}}
-    <link rel="stylesheet" type="text/css"
-          href="{{url_for('static', filename='bootstrap.min.css')}}">
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script>window.jQuery || document.write('<script src="{{
   url_for('static', filename='jquery.js') }}">\x3C/script>')</script>
+    {{super()}}
+    <link rel="stylesheet" type="text/css"
+          href="{{url_for('static', filename='bootstrap.min.css')}}">
 {% endblock %}
 
 {% block content %}
@@ -35,7 +35,7 @@
             <div class="col-lg-6 col-md-6 col-sm-12">
                 <div class="jumbotron">
                     {% if status == 'started' %}
-                        <h1 class="display-4">Presenter: {{ latest_meeting.presenter.name }}</h1>
+                        <h1 class="display-4">Presenter: <span style="white-space:nowrap;">{{ latest_meeting.presenter.username }}</span></h1>
                         <p class="lead">The meeting started at: {{ latest_meeting.start_ts }}</p>
                         <hr class="my-4">
                         <p>Press the button to stop the meeting.</p>
@@ -64,7 +64,7 @@
                 </div>
             </div>
             <div class="col-md-5 col-sm-12">
-                <table class="table table-hover">
+                <table class="table table-hover" id="users">
                     <thead>
                     <tr class="table-primary">
                         <th scope="col">Username</th>
@@ -75,28 +75,43 @@
                     <tbody>
                     {% for p in persons %}
                         <tr {% if not p.available %}class="table-active"{% endif %}
-                            {% if p.id not in ongoing_participants %}class="table-dark"{% endif %} >
-                            <th scope="row">{{ p.username }} {% if ongoing and p.id == latest_meeting.presenter_id %}
+                            {% if p.id not in ongoing_participants %}class="table-dark"{% endif %} id="r_{{ p.id }}" >
+                            <th scope="row">{{ p.username }} {% if status!='finished' and p.id == latest_meeting.presenter_id %}
                                 <span class="badge badge-danger">Presenter</span> {% endif %}</th>
                             <td>
-                                {% if status!='finished' and p.id not in ongoing_participants %}Excluded{% else %}
-                                {% if not p.available %}Not Present{% endif %}{% endif %}
+                                {% if not p.available %}Not Present{% else %}
+                                {% if status!='finished' and p.id not in ongoing_participants %}Excluded{% endif %}{% endif %}
                             </td>
                             <td>
-                                {% if status!='finished' %} {% if p.id not in ongoing_participants %}Include{% else %}Exclude{% endif %}{% endif %}
-                                {% if not p.available %}<i class="fas fa-plus-circle"></i>{% else %}<i class="fas fa-user-times"></i>{% endif %}
+                                {% if p.available %}
+                                    {% if status!='finished' %}
+                                        {% if p.id not in ongoing_participants %}
+                                            <a href="#" class="fas fa-sign-in-alt" onclick="invitation_add({{ p.id }})"></a>
+                                        {% else %}
+                                            <a href="#" class="fas fa-sign-out-alt" onclick="invitation_del({{ p.id }})"></a>
+                                        {% endif %}
+                                    {% endif %}
+                                    <a href="#" class="fas fa-user-times" onclick="presence_del({{ p.id }})"></a>
+                                {% else %}
+                                    <a href="#" class="fas fa-undo" onclick="presence_add({{ p.id }})"></a>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
-                    <tr class="table-success">
-                        <th scope="row">
-                            <input type="text" value="Add new" class="form-control" id="inputValid">
-                            <!--<input type="text" value="correct value" class="form-control is-valid" id="inputValid">-->
-                            <!--<div class="valid-feedback">Success! You've done it.</div>-->
-                        </th>
-                        <td></td>
-                        <td class="align-middle"><i class="fas fa-user-plus"></i> </td>
-                    </tr>
+                    </tbody>
+                </table>
+                <table class="table table-hover">
+                    <tbody>
+                        <tr class="table-success">
+                            <th scope="row">
+                                <input type="text" value="Add new" class="form-control" id="new_user"
+                                       onkeypress="if($(this).val()==='Add new')$(this).val('')" onblur="if($(this).val()==='')$(this).val('Add new')">
+                                <!--<input type="text" value="correct value" class="form-control is-valid" id="inputValid">-->
+                                <!--<div class="valid-feedback">Success! You've done it.</div>-->
+                            </th>
+                            <td></td>
+                            <td class="align-middle"><a href="#" onclick="add_user()" class="fas fa-user-plus"></a> </td>
+                        </tr>
                     </tbody>
                 </table>
                 </div>
@@ -108,15 +123,36 @@
 {% block scripts %}
     <script>
             create_meeting = function () {
-                $.post('api/create_meeting').done(function () {location.reload()});
+                $.post('api/create_meeting').success(function () {location.reload()});
             };
 
             start_meeting = function () {
-                $.post('api/start_meeting').done(function () {location.reload()});
+                $.post('api/start_meeting').success(function () {location.reload()});
             };
 
             stop_meeting = function () {
-                $.post('api/stop_meeting').done(function () {location.reload()});
+                $.post('api/stop_meeting').success(function () {location.reload()});
+            };
+
+            add_user = function () {
+                var uname = $('#new_user').val();
+                $.post('api/person/' + uname).success(function () {location.reload()});
+            };
+
+            presence_add = function (pid) {
+                $.post('/api/person/presence/' + pid).success(function () {location.reload()});
+            };
+
+            presence_del = function (pid) {
+                $.ajax({url: '/api/person/presence/' + pid, type: 'DELETE'}).success(function () {location.reload()});
+            };
+
+            invitation_add = function (pid) {
+                $.post('/api/participant/{{ meeting_id }}/' + pid).success(function () {location.reload()});
+            };
+
+            invitation_del = function (pid) {
+                $.ajax({url: '/api/participant/{{ meeting_id }}/' + pid, type: 'DELETE'}).success(function () {location.reload()});
             };
     </script>
 {% endblock %}
