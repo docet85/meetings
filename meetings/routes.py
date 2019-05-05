@@ -1,5 +1,5 @@
 from flask import render_template, request, make_response
-from meetings.models import Meeting, Person, invitation
+from meetings.models import Meeting, Person, Event
 from meetings import db
 
 
@@ -29,9 +29,44 @@ def create_routes(app):
     @app.route("/hist")
     def hist():
         """
-        The history page, displaying the last meetings, and the exclusion log
+        The history page, displaying the info log
         """
-        return render_template('hist.jinja2', query_results=Meeting.query.paginate(per_page=5))
+        e_info = [
+            {
+                'label': 'Meeting created',
+                'class': 'primary'
+            },
+            {
+                'label': 'Meeting start',
+                'class': 'success'
+            },
+            {
+                'label': 'Meeting finish',
+                'class': 'danger'
+            },
+            {
+                'label': 'New Person created',
+                'class': 'info'
+            },
+            {
+                'label': 'Person now available',
+                'class': 'light'
+            },
+            {
+                'label': 'Person missing',
+                'class': 'active'
+            },
+            {
+                'label': 'Person Invited',
+                'class': 'warning'
+            },
+            {
+                'label': 'Person Excluded',
+                'class': 'dark'
+            },
+        ]
+        return render_template('hist.jinja2', events=Event.query.order_by(Event.ts.desc()).paginate(per_page=10),
+                               e_info=e_info)
 
     # ########################## API ############################ #
 
@@ -41,6 +76,7 @@ def create_routes(app):
         m.participants = [p for p in Person.query.filter_by(available=True).all()]
         db.session.add(m)
         db.session.commit()
+        log_event(0, mid=m.id)
         return make_response('ok', 200)
 
     @app.route("/api/start_meeting", methods=['POST'])
@@ -56,6 +92,7 @@ def create_routes(app):
         m.presenter_id = choice(p_ids)
 
         db.session.commit()
+        log_event(1, mid=m.id)
         return make_response('ok', 200)
 
     @app.route("/api/stop_meeting", methods=['POST'])
@@ -66,6 +103,7 @@ def create_routes(app):
         m.status = 'finished'
 
         db.session.commit()
+        log_event(2, mid=m.id)
         return make_response('ok', 200)
 
     @app.route("/api/person/<uname>", methods=['POST'])
@@ -75,6 +113,7 @@ def create_routes(app):
         p = Person(**j_person)
         db.session.add(p)
         db.session.commit()
+        log_event(3, pid=p.id)
         return make_response(json.dumps(p.to_dict()), 200)
 
     @app.route("/api/person/presence/<pid>", methods=['POST', 'DELETE'])
@@ -82,6 +121,10 @@ def create_routes(app):
         p = Person.query.filter_by(id=pid).first_or_404()
         p.available = (request.method == 'POST')
         db.session.commit()
+        e_code = 5
+        if p.available:
+            e_code = 4
+        log_event(e_code, pid=p.id)
         return make_response('ok', 200)
 
     @app.route("/api/participant/<meeting_id>/<person_id>", methods=['POST', 'DELETE'])
@@ -93,7 +136,20 @@ def create_routes(app):
 
         if request.method == 'POST':
             m.participants.append(p)
+            e_code = 6
         else:
             m.participants.remove(p)
+            e_code = 7
         db.session.commit()
+        log_event(e_code, pid=p.id, mid=m.id)
+
         return make_response('ok', 200)
+
+
+def log_event(e_code, pid=None, mid=None):
+    try:
+        e = Event(event_code=e_code, meeting_id=mid, person_id=pid)
+        db.session.add(e)
+        db.session.commit()
+    except:
+        print("Event logging failed")

@@ -103,11 +103,9 @@
                 <table class="table table-hover">
                     <tbody>
                         <tr class="table-success">
-                            <th scope="row">
+                            <th scope="row" id="new_user_container">
                                 <input type="text" value="Add new" class="form-control" id="new_user"
                                        onkeypress="if($(this).val()==='Add new')$(this).val('')" onblur="if($(this).val()==='')$(this).val('Add new')">
-                                <!--<input type="text" value="correct value" class="form-control is-valid" id="inputValid">-->
-                                <!--<div class="valid-feedback">Success! You've done it.</div>-->
                             </th>
                             <td></td>
                             <td class="align-middle"><a href="#" onclick="add_user()" class="fas fa-user-plus"></a> </td>
@@ -136,7 +134,14 @@
 
             add_user = function () {
                 var uname = $('#new_user').val();
-                $.post('api/person/' + uname).success(function () {location.reload()});
+                $.post('api/person/' + uname)
+                    .success(function () {location.reload()})
+                    .fail(function () {
+                        $('#new_user').addClass('is-invalid');
+                        $('#new_user_container').append(
+                            '<div class="invalid-feedback">Sorry, that username\'s taken. Try another?</div>'
+                        )
+                    });
             };
 
             presence_add = function (pid) {
@@ -155,4 +160,5 @@
                 $.ajax({url: '/api/participant/{{ meeting_id }}/' + pid, type: 'DELETE'}).success(function () {location.reload()});
             };
     </script>
+{#    {{ super() }}#}
 {% endblock %}

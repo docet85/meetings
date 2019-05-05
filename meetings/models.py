@@ -44,19 +44,23 @@ class Meeting(db.Model):
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ts = db.Column(db.DateTime, nullable=False, default=datetime.now)
-    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    meeting_id = db.Column(db.Integer, db.ForeignKey('meeting.id'), primary_key=True)
-    event_id = db.Column(db.Integer, nullable=False)
+    event_code = db.Column(db.Integer, nullable=False)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'))
+    meeting_id = db.Column(db.Integer, db.ForeignKey('meeting.id'))
+
+    person = db.relationship('Person', primaryjoin='Event.person_id == Person.id')
+    meeting = db.relationship('Meeting', primaryjoin='Event.meeting_id == Meeting.id')
 
     """  for simplicity and extendability no enum but int - there should be a static table with definitions - but for a
          demo hardcoded values are enough.
+         0 - meeting created
          1 - meeting start
-         2 - meeting stop
+         2 - meeting finish
          3 - person added
-         4 - person missing
-         5 - person available
-         6 - person added to meeting
-         7 - person removed from meeting
+         4 - person present
+         5 - person absent
+         6 - person invited
+         7 - person excluded
          """
 
 
